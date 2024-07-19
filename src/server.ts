@@ -36,7 +36,7 @@ const baseUrl = 'https://' + DOMAIN
 
 
 const routes = [publicProfileRoute, pkiRoute, p2pDestinationsRoute, receiveTransactionRoute]
-const paymailRouter = new PaymailRouter({ baseUrl, routes })
+const paymailRouter = new PaymailRouter({ baseUrl, basePath: '/api/paymail', routes })
 app.use(paymailRouter.getRouter())
 
 const PORT = 3000
