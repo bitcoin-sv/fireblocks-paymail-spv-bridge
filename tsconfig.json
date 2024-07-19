@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "lib": ["dom", "ESNext"],
+    "moduleDetection": "force",
+    "target": "es2019",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "rootDir": "./",
+    "baseUrl": "./",
+    "outDir": "./dist/cjs",
+    "strict": false,
+    "isolatedModules": true,
+    "strictNullChecks": false,
+    "downlevelIteration": false,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "incremental": true,
+    "sourceMap": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+  },
+  "exclude": ["dist", "*/**/__tests"]
+}
