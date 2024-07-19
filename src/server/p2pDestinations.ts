@@ -1,17 +1,13 @@
-import { P2PKH } from '@bsv/sdk'
+import { P2PKH, OP } from '@bsv/sdk'
 import { P2pPaymentDestinationRoute } from '@bsv/paymail'
-import { fetchUser } from '../mockUser.js'
+import { fireblocksPaymailVault } from '../fireblocks/FireblocksVault.js'
 import 'dotenv/config'
-import { Fireblocks, BasePath, TransferPeerPathType } from '@fireblocks/ts-sdk'
-
-const { DEPOSITS } = process.env
-const script = new P2PKH().lock(DEPOSITS)
 
 const p2pDestinationsRoute = new P2pPaymentDestinationRoute({
   domainLogicHandler: async (params, body) => {
-    const { name, domain } = P2pPaymentDestinationRoute.getNameAndDomain(params)
-    const user = await fetchUser(name, domain)
-    const { reference } = user.getPaymailDestination()
+    if (typeof body?.satoshis !== 'number') throw new Error('satoshi amount must be a number')
+    if (body.satoshis < 1) throw new Error('satoshi amount must be greater than 0')
+    const { script, reference } = await fireblocksPaymailVault.getPaymailDestination()
     return {
       outputs: [
         {

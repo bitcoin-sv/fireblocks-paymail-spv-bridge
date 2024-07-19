@@ -1,14 +1,13 @@
 import { PublicProfileRoute } from '@bsv/paymail'
-import { fetchUser } from '../mockUser.js'
+import { fireblocksPaymailVault } from '../fireblocks/FireblocksVault'
 
 const publicProfileRoute = new PublicProfileRoute({
   domainLogicHandler: async (params) => {
     const { name, domain } = PublicProfileRoute.getNameAndDomain(params)
-    const user = await fetchUser(name, domain)
     return {
-      name: user.getAlias(),
+      name: 'Deposits',
       domain,
-      avatar: user.getAvatarUrl()
+      avatar: fireblocksPaymailVault.getAvatarUrl()
     }
   }
 })

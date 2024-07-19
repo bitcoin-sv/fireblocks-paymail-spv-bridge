@@ -1,33 +1,24 @@
-import { PaymailClient, ReceiveBeefTransactionRoute } from '@bsv/paymail'
-import { Transaction } from '@bsv/sdk'
-import { fetchUser } from '../mockUser.js'
+import { PaymailClient, ReceiveTransactionRoute } from '@bsv/paymail'
+import { SatoshisPerKilobyte, Transaction, WhatsOnChain, ARC, isBroadcastFailure } from '@bsv/sdk'
 
-const WocHeadersClient = {
-  isValidRootForHeight: async (merkleRoot, height) => {
-    try {
-      const { merkleroot } = await (await fetch(`https://api.whatsonchain.com/v1/bsv/main/block/height/${height}`)).json()
-      return merkleroot === merkleRoot
-    } catch (error) {
-      console.error('error fetching merkleroot', error)
-      return false
-    }
-  }
-}
-
-const receiveBeefTransactionRoute = new ReceiveBeefTransactionRoute({
+const receiveTransactionRoute = new ReceiveTransactionRoute({
   domainLogicHandler: async (params, body) => {
-    const { name, domain } = ReceiveBeefTransactionRoute.getNameAndDomain(params)
-    const user = await fetchUser(name, domain)
-    const tx = Transaction.fromHexBEEF(body.hex)
-    tx.verify(WocHeadersClient)
-    await user.broadcastTransaction(tx)
-    await user.processTransaction(tx, body.reference)
-    return {
-      txid: tx.id('hex')
+    try {
+      const beefTx = Transaction.fromHex(body.beef)
+      const valid = await beefTx.verify(new WhatsOnChain(), new SatoshisPerKilobyte(1))
+      if (!valid) throw Error('SPV rejected transaction')
+      const arcResponse = await beefTx.broadcast(new ARC('https://arc.taal.com'))
+      if (isBroadcastFailure(arcResponse)) throw Error('ARC rejected transaction ' + arcResponse.description + ' ' + arcResponse?.more)
+      return {
+        txid: beefTx.id('hex'), note: 'deposit successful'
+      }
+    } catch (error) {
+      console.log({ error })
+      return { error: error?.message || 'Failed to process transaction' }
     }
   },
   verifySignature: false,
   paymailClient: new PaymailClient()
 })
 
-export default receiveBeefTransactionRoute
+export default receiveTransactionRoute
