@@ -3,31 +3,22 @@ import { PaymailClient } from '@bsv/paymail'
 
 const client = new PaymailClient();
 
-// (async () => {
-//   const sender = mockUser1
-//   const receiver = mockUser2.getPaymail()
-//   await sender.initWallet()
-//   const startingBalance = await sender.getSatoshiBalance()
-//   console.log('sender starting balance', startingBalance)
+async function makePayment (req, res) {
+  try {
+    // get the vault id which holds BSV and check the balance is enough to pay the amount in the request
+    
+    // parse out the params for who we are paying and how much.
 
-//   if (startingBalance < 3) {
-//     throw new Error('insufficient balance')
-//   }
+    // go get a set of destinations from the payee with p2pDest
 
-//   const p2pDestination = await client.getP2pPaymentDestination(receiver, startingBalance - 1)
+    // parse the outputs into destinations for fireblocks transaction
 
-//   // example we are assuming only one output but in reality it can be many
-//   const { tx, reference } = await sender.getSpendingTransactionToScript(p2pDestination.outputs[0].script, startingBalance - 1)
+    // create a transaction with the destinations from the vault id
 
-//   await client.sendTransactionP2P(receiver, tx.toHex(), p2pDestination.reference,
-//     {
-//       sender: sender.getPaymail(),
-//       pubkey: sender.getIdentityKey(), 
-//       signature: client.createP2PSignature(tx.id('hex') as string, sender.getIdentityPrivateKey()),
-//       note: 'hello world'
-//     })
-//   await sender.broadcastTransaction(tx)
-//   mockUser1.processTransaction(tx, reference)
-//   console.log('sender updated balance', await sender.getSatoshiBalance())
-//   await sender.closeWallet()
-// })()
+    return res.json({ message: 'Payment sent' })
+  } catch (error) {
+    return res.json({ error: error?.message || 'Failed to pay' })
+  }
+}
+
+export default makePayment
