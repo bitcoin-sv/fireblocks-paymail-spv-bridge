@@ -1,5 +1,5 @@
 
-import { Fireblocks, BasePath, TransferPeerPathType } from '@fireblocks/ts-sdk'
+import { Fireblocks, BasePath } from '@fireblocks/ts-sdk'
 import 'dotenv/config'
 
 // Initialize a Fireblocks API instance with local variables
