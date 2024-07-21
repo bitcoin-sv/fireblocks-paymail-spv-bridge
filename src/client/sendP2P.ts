@@ -27,20 +27,26 @@ const update = {
 async function sendP2P (req, res) {
   try {
     console.log(req.body)
-    // const decoded = jwt.decode(req.headers['x-webhook-secret'], process.env.WEBHOOK_SECRET)
-    // console.log({ decoded })
-    // if(decoded.exp > 210120201020120 ) throw Error('Invalid webhook secret') //Math.floor(Date.now() / 1000)
-
+    const decoded = jwt.decode(req.headers['x-webhook-secret'], process.env.WEBHOOK_SECRET)
+    console.log({ decoded })
+    if(decoded.exp > Math.floor(Date.now() / 1000) ) throw Error('Invalid webhook secret')
+    console.log({ waiting: '10 seconds' })
+    // pause for 10 seconds to ensure WoC has the tx
+    await new Promise(resolve => setTimeout(resolve, 10000))
     const update = await fireblocks.transactions.getTransaction({ txId: req.body.txId })
     console.log({ update })
 
-    const txid = update.data.txHash ?? 'unknown'
+    if (!update?.data?.txHash) throw Error('No txHash in update')
+    if (!update?.data?.note) throw Error('No note in update')
+    const txid = update.data.txHash
     const paymail = update.data.note.split(' ')[4]
     const reference = update.data.note.split(' ')[5]
 
     console.log({ txid, paymail })
 
     const rawtx = await (await fetch(`https://api.whatsonchain.com/v1/bsv/main/tx/${txid}/hex`)).text()
+
+    console.log({ rawtx })
     
     // if the recipient has beef capability send beef otherwise send rawtx
     let hasBeefCapability = false
@@ -50,6 +56,8 @@ async function sendP2P (req, res) {
     } catch (error) {
         console.log(error?.message || 'No beef capability')
     }
+
+    console.log({ hasBeefCapability })
     
     let beef = ''
     if (hasBeefCapability) {
@@ -66,6 +74,8 @@ async function sendP2P (req, res) {
             console.log(error?.message || 'Failed to convert to BEEF')
         }
     }
+
+    console.log({ beef })
 
     let sendResponse
     const metadata = {
