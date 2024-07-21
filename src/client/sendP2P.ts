@@ -1,7 +1,7 @@
 import { PaymailClient, P2pReceiveBeefTransactionCapability } from '@bsv/paymail'
 import fireblocks from '../fireblocks/client'
 import jwt from 'jwt-simple'
-import { fireblocksPaymailVault } from 'src/fireblocks/FireblocksVault'
+import { fireblocksPaymailVault } from '../fireblocks/FireblocksVault'
 
 const client = new PaymailClient()
 
@@ -29,7 +29,7 @@ async function sendP2P (req, res) {
     console.log(req.body)
     const decoded = jwt.decode(req.headers['x-webhook-secret'], process.env.WEBHOOK_SECRET)
     console.log({ decoded })
-    if(decoded.exp > Math.floor(Date.now() / 1000) ) throw Error('Invalid webhook secret')
+    if(decoded.exp < Math.floor(Date.now() / 1000) ) throw Error('Invalid webhook secret')
     console.log({ waiting: '10 seconds' })
     // pause for 10 seconds to ensure WoC has the tx
     await new Promise(resolve => setTimeout(resolve, 10000))
@@ -95,6 +95,7 @@ async function sendP2P (req, res) {
 
     return res.json({ success: true })
   } catch (error) {
+    console.log({ error })
     return res.json({ error: error?.message || 'Failed to pay' })
   }
 }

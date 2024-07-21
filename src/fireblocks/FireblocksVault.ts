@@ -73,7 +73,7 @@ class FireblocksVault {
 }
 
 
-const fireblocksPaymailVault = new FireblocksVault('deposits', process.env.DOMAIN, process.env?.AVATAR_URL || 'https://i.imgur.com/8zeyWBR.png')
+const fireblocksPaymailVault = new FireblocksVault('vault', process.env.DOMAIN, process.env?.AVATAR_URL || 'https://i.imgur.com/8zeyWBR.png')
 
 export { fireblocksPaymailVault }
 
