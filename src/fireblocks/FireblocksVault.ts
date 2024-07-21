@@ -22,6 +22,10 @@ class FireblocksVault {
     this.pki = this.pkiPrivKey.toPublicKey().toString()
   }
 
+  getIdentityPrivateKey() {
+    return this.pkiPrivKey
+  }
+
   getIdentityKey () {
     return this.pki
   }

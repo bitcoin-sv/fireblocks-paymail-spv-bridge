@@ -29,7 +29,9 @@ import receiveTransactionRoute from './server/receiveTransaction';
 import publicProfileRoute from './server/publicProfile';
 import pkiRoute from './server/pki';
 import { PaymailRouter } from '@bsv/paymail';
-import makePayment from './client/sendP2P'
+import makePayment from './client/makePayment'
+import bodyParser from 'body-parser'
+import sendP2P from './client/sendP2P';
 
 const app = express()
 const DOMAIN = process.env.DOMAIN ?? 'localhost' // Replace with your actual domain
@@ -40,6 +42,7 @@ const routes = [publicProfileRoute, pkiRoute, p2pDestinationsRoute, receiveTrans
 const paymailRouter = new PaymailRouter({ baseUrl, basePath: '/api/paymail', routes })
 app.use(paymailRouter.getRouter())
 app.get('/api/pay/:paymail/:amount', makePayment)
+app.use(bodyParser.json({ type: 'application/json' })).post('/api/update', sendP2P)
 
 const PORT = 3000
 app.listen(PORT, async () => {

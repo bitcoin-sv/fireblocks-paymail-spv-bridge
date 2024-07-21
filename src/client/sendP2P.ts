@@ -1,60 +1,92 @@
-import { PaymailClient } from '@bsv/paymail'
+import { PaymailClient, P2pReceiveBeefTransactionCapability } from '@bsv/paymail'
 import fireblocks from '../fireblocks/client'
-import { TransferPeerPathType } from '@fireblocks/ts-sdk'
-import { Utils, Script } from '@bsv/sdk'
+import jwt from 'jwt-simple'
+import { fireblocksPaymailVault } from 'src/fireblocks/FireblocksVault'
 
 const client = new PaymailClient()
 
-async function makePayment (req, res) {
+const update = {
+  title: 'Transaction - Signed, BSV Association',
+  description: 'Signed',
+  createdAt: 'Sat Jul 20 2024 20:20:50 GMT+0000 (Coordinated Universal Time)',
+  workspace: 'BSV Association',
+  event: 'Signed',
+  subject: 'Transaction',
+  user: 'create-transactions BSV Association',
+  userId: '3ee8e3c7-dac4-41e5-adff-89fb6662c635',
+  eventKey: 'transaction',
+  txId: '775cc542-4543-456d-bdf8-256febff23b9',
+  signedBy: 'Darren Kellenschwiler',
+  initiatedBy: 'create-transactions BSV Association',
+  netAmount: '0.00001000',
+  notificationSubject: 'Transaction Signed',
+  category: 'Transactions',
+  categoryId: '8'
+}
+
+async function sendP2P (req, res) {
   try {
-    // check the balance is enough to pay the amount in the request
-    const balances = await fireblocks.vaults.getVaultBalanceByAsset({ assetId: 'BSV' })
-    const satoshiBalance = Number(balances?.data?.total) * 100_000_000
+    console.log(req.body)
+    // const decoded = jwt.decode(req.headers['x-webhook-secret'], process.env.WEBHOOK_SECRET)
+    // console.log({ decoded })
+    // if(decoded.exp > 210120201020120 ) throw Error('Invalid webhook secret') //Math.floor(Date.now() / 1000)
 
-    // parse out the params for who we are paying and how much.
-    const { paymail, amount } = req.params
-    const satoshis = Number(amount)
-    console.log({ paymail, satoshis })
+    const update = await fireblocks.transactions.getTransaction({ txId: req.body.txId })
+    console.log({ update })
 
-    if (satoshiBalance < satoshis + 1) throw Error('Insufficient funds: we have ' + satoshiBalance + ' satoshis, but need ' + satoshis + 1)
+    const txid = update.data.txHash ?? 'unknown'
+    const paymail = update.data.note.split(' ')[4]
+    const reference = update.data.note.split(' ')[5]
 
-    // go get a set of destinations from the payee with p2pDest
-    const p2pDest = await client.getP2pPaymentDestination(paymail, satoshis)
+    console.log({ txid, paymail })
 
-    // parse the outputs into destinations for fireblocks transaction
-    const destinations = p2pDest.outputs.map(output => {
-      const s = Script.fromHex(output.script)
-      const address = Utils.toBase58Check(s.chunks[2].data)
-      return {
-        amount: String(output.satoshis / 100_000_000),
-        destination: {
-          type: TransferPeerPathType.OneTimeAddress,
-          oneTimeAddress: {
-            address,
-          },
-        }
-      }
-    })
+    const rawtx = await (await fetch(`https://api.whatsonchain.com/v1/bsv/main/tx/${txid}/hex`)).text()
     
-    // create a transaction with the destinations from the vault id
-    let transactionRequest = {
-        assetId: "BSV",
-        amount: String(satoshis / 100_000_000),
-        source: {
-            type: TransferPeerPathType.VaultAccount,
-            id: '1',
-        },
-        destinations,
-        note: "Pay " + satoshis + " sats to " + paymail + " " + p2pDest.reference,
+    // if the recipient has beef capability send beef otherwise send rawtx
+    let hasBeefCapability = false
+    try {
+        await client.ensureCapabilityFor(paymail.split('@')[1], P2pReceiveBeefTransactionCapability.getCode())
+        hasBeefCapability = true
+    } catch (error) {
+        console.log(error?.message || 'No beef capability')
+    }
+    
+    let beef = ''
+    if (hasBeefCapability) {
+        try {
+            const response = await (await fetch('https://beef.xn--nda.network/api', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ rawtx })
+            })).json()
+            if (!response?.beef) throw Error('Invalid conversion to BEEF')
+            beef = response.beef
+        } catch (error) {
+            hasBeefCapability = false
+            console.log(error?.message || 'Failed to convert to BEEF')
+        }
     }
 
-    console.log({ transactionRequest })
+    let sendResponse
+    const metadata = {
+        sender: fireblocksPaymailVault.getPaymail(),
+        pubkey: fireblocksPaymailVault.getIdentityKey(),
+        signature: client.createP2PSignature(txid, fireblocksPaymailVault.getIdentityPrivateKey()),
+        note: 'Withdrawal'
+    }
+    if (hasBeefCapability) {
+        sendResponse = await client.sendBeefTransactionP2P(paymail, beef, reference, metadata)
+    } else {
+        sendResponse = await client.sendTransactionP2P(paymail, rawtx, reference, metadata)
+    }
+    
+    console.log({ sendResponse })
+    // TODO: think about how to handle failures
 
-    const transaction = await fireblocks.transactions.createTransaction({ transactionRequest })
-    return res.json(transaction.data)
+    return res.json({ success: true })
   } catch (error) {
     return res.json({ error: error?.message || 'Failed to pay' })
   }
 }
 
-export default makePayment
+export default sendP2P
