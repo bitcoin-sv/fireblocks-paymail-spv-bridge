@@ -18,7 +18,7 @@ class FireblocksVault {
     this.avatarUrl = avatarUrl
     this.secret = jwtSecret
     this.counter = 0
-    this.pkiPrivKey = PrivateKey.fromRandom()
+    this.pkiPrivKey = PrivateKey.fromWif(process.env.WEBHOOK_SECRET)
     this.pki = this.pkiPrivKey.toPublicKey().toString()
   }
 
