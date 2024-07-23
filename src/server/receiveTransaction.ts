@@ -1,6 +1,6 @@
 import { PaymailClient, ReceiveTransactionRoute } from '@bsv/paymail'
 import { SatoshisPerKilobyte, Transaction, WhatsOnChain, ARC, isBroadcastFailure, Utils, PublicKey } from '@bsv/sdk'
-import fireblocks from '../fireblocks/client'
+import fireblocks, { whitelister } from '../fireblocks/client'
 
 const receiveTransactionRoute = new ReceiveTransactionRoute({
   domainLogicHandler: async (params, body) => {
@@ -50,7 +50,7 @@ const receiveTransactionRoute = new ReceiveTransactionRoute({
         try {
           const pubkey = Utils.toHex(input.unlockingScript.chunks[1].data)
           const address = PublicKey.fromString(pubkey).toAddress()
-          const addAddressToWallet = await fireblocks.externalWallets.addAssetToExternalWallet({ 
+          const addAddressToWallet = await whitelister.externalWallets.addAssetToExternalWallet({ 
             walletId: createExternalWallet?.data?.id || '', 
             assetId: 'BSV',
             addAssetToExternalWalletRequest: {
@@ -65,13 +65,17 @@ const receiveTransactionRoute = new ReceiveTransactionRoute({
       // wait 10 seconds
       await new Promise(resolve => setTimeout(resolve, 5000))
       // update the transaction with the confirmation threshold
-      const setTransactionConfirmationThreshold = await fireblocks.transactions.setTransactionConfirmationThreshold({ 
+      try {
+        const setTransactionConfirmationThreshold = await fireblocks.transactions.setTransactionConfirmationThreshold({ 
         txId: tx.id('hex'), 
-        setConfirmationsThresholdRequest: {
-          numOfConfirmations: 0
-        }
-      })
-      console.log({ setTransactionConfirmationThreshold })
+          setConfirmationsThresholdRequest: {
+            numOfConfirmations: 1
+          }
+        })
+        console.log({ setTransactionConfirmationThreshold })
+      } catch (error) {
+        console.log({ error })
+      }
       return {
         txid: tx.id('hex'), note: 'deposit successful'
       }

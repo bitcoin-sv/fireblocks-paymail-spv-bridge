@@ -9,4 +9,11 @@ const fc = new Fireblocks({
     secretKey: process.env.FIREBLOCKS_SECRET,
 })
 
+// Initialize a Fireblocks API instance with local variables
+export const whitelister = new Fireblocks({
+    basePath: BasePath.US,
+    apiKey: process.env.FIREBLOCKS_WHITELIST_KEY,
+    secretKey: process.env.FIREBLOCKS_SECRET,
+})
+
 export default fc
