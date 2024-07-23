@@ -1,6 +1,7 @@
 import { PaymailClient, ReceiveTransactionRoute } from '@bsv/paymail'
 import { SatoshisPerKilobyte, Transaction, WhatsOnChain, ARC, isBroadcastFailure, Utils, PublicKey } from '@bsv/sdk'
-import fireblocks, { whitelister } from '../fireblocks/client'
+import fireblocks from '../fireblocks/client'
+const client = new PaymailClient()
 
 const receiveTransactionRoute = new ReceiveTransactionRoute({
   domainLogicHandler: async (params, body) => {
@@ -17,47 +18,48 @@ const receiveTransactionRoute = new ReceiveTransactionRoute({
       if (!valid) throw Error('SPV rejected transaction')
       const arcResponse = await beefTx.broadcast(new ARC('https://arc.taal.com'))
       if (isBroadcastFailure(arcResponse)) throw Error('ARC rejected transaction ' + arcResponse.description + ' ' + arcResponse?.more)
-      const senderInfo = {
+      const sender = {
         paymail: body?.metadata?.sender || '',
         pubkey: body?.metadata?.pubkey || '',
         signature: body?.metadata?.signature || '',
         note: body?.metadata?.note || '',
-        reference: body?.reference || ''
+        reference: body?.reference || '',
+        name: '',
       }
-
-      let createExternalWallet
+      
       try {
-        createExternalWallet = await fireblocks.externalWallets.createExternalWallet({ 
-          createWalletRequest: {
-            name: senderInfo.paymail,
-            customerRefId: body?.metadata?.pubkey
-          }
-        })
-        console.log({ createExternalWallet })
+        const profile = await client.getPublicProfile(sender.paymail)
+        if (profile.name) sender.name = profile.name
       } catch (error) {
         console.log({ error })
-        const externalWallets = await fireblocks.externalWallets.getExternalWallets()
-        const externalWallet = externalWallets.data.find(wallet => wallet.name === senderInfo.paymail)
-        createExternalWallet = {
-          data: {
-            id: externalWallet.id
-          }
-        }
       }
 
+      let senderInfo = ''
+      if (sender.paymail) senderInfo += sender.paymail + '|'
+      if (sender.signature) senderInfo += sender.signature + '|'
+      if (sender.name) senderInfo += sender.name + '|'
+      if (sender.pubkey) senderInfo += PublicKey.fromString(sender.pubkey).toAddress() + '|'
+      if (sender.note) senderInfo += sender.note + '|'
+      if (sender.reference) senderInfo += sender.reference + '|'
+
+      senderInfo = senderInfo.slice(0, 128).split('|').slice(0,-1).join('|')
+      // get the vault account
+      const vaults = await fireblocks.vaults.getAssetWallets()
+      const vault = vaults.data.assetWallets.find(wallet => wallet.assetId === 'BSV')
       // update the transaction with the reference and associated sender.
       await Promise.all(tx.inputs.map(async input => {
         try {
           const pubkey = Utils.toHex(input.unlockingScript.chunks[1].data)
           const address = PublicKey.fromString(pubkey).toAddress()
-          const addAddressToWallet = await whitelister.externalWallets.addAssetToExternalWallet({ 
-            walletId: createExternalWallet?.data?.id || '', 
+          const updateVaultAccountAssetAddress = await fireblocks.vaults.updateVaultAccountAssetAddress({ 
+            vaultAccountId: vault.vaultId, 
             assetId: 'BSV',
-            addAssetToExternalWalletRequest: {
-              address,
-            }
+            addressId: address,
+            updateVaultAccountAssetAddressRequest: { 
+              description: senderInfo,
+            },
           })
-          console.log({ addAddressToWallet })
+          console.log({ updateVaultAccountAssetAddress })
         } catch (error) {
           console.log({ error })
         }
