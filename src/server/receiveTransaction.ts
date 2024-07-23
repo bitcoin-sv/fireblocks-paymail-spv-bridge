@@ -47,10 +47,10 @@ const receiveTransactionRoute = new ReceiveTransactionRoute({
       const vaults = await fireblocks.vaults.getAssetWallets()
       const vault = vaults.data.assetWallets.find(wallet => wallet.assetId === 'BSV')
       // update the transaction with the reference and associated sender.
-      await Promise.all(tx.inputs.map(async input => {
+      await Promise.all(tx.outputs.map(async output => {
         try {
-          const pubkey = Utils.toHex(input.unlockingScript.chunks[1].data)
-          const address = PublicKey.fromString(pubkey).toAddress()
+          const hash = output.lockingScript.chunks[2].data
+          const address = Utils.toBase58Check(hash)
           const updateVaultAccountAssetAddress = await fireblocks.vaults.updateVaultAccountAssetAddress({ 
             vaultAccountId: vault.vaultId, 
             assetId: 'BSV',
@@ -68,10 +68,10 @@ const receiveTransactionRoute = new ReceiveTransactionRoute({
       await new Promise(resolve => setTimeout(resolve, 5000))
       // update the transaction with the confirmation threshold
       try {
-        const setTransactionConfirmationThreshold = await fireblocks.transactions.setTransactionConfirmationThreshold({ 
-        txId: tx.id('hex'), 
+        const setTransactionConfirmationThreshold = await fireblocks.transactions.setConfirmationThresholdByTransactionHash({ 
+          txHash: tx.id('hex'), 
           setConfirmationsThresholdRequest: {
-            numOfConfirmations: 1
+            numOfConfirmations: 0
           }
         })
         console.log({ setTransactionConfirmationThreshold })

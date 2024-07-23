@@ -39,7 +39,7 @@ const baseUrl = 'https://' + DOMAIN
 
 
 const routes = [publicProfileRoute, pkiRoute, p2pDestinationsRoute, receiveTransactionRoute]
-const paymailRouter = new PaymailRouter({ baseUrl, basePath: '/api/paymail', routes })
+const paymailRouter = new PaymailRouter({ baseUrl, basePath: '/api/paymail', routes, requestSenderValidation: true })
 app.use(paymailRouter.getRouter())
 app.get('/api/pay/:paymail/:amount', makePayment)
 app.use(bodyParser.json({ type: 'application/json' })).post('/api/update', sendP2P)
