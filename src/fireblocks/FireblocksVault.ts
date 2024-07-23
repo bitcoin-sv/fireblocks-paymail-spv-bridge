@@ -43,7 +43,13 @@ class FireblocksVault {
         const reference = this.getReferenceToken(this.counter++)
         const vaults = await fireblocks.vaults.getAssetWallets()
         const vault = vaults.data.assetWallets.find(wallet => wallet.assetId === 'BSV')
-        const response = await fireblocks.vaults.createVaultAccountAssetAddress({ vaultAccountId: vault.vaultId, assetId: 'BSV' })
+        const response = await fireblocks.vaults.createVaultAccountAssetAddress({ 
+          vaultAccountId: vault.vaultId, 
+          assetId: 'BSV', 
+          createAddressRequest: { 
+            description: reference,
+          } 
+        })
         if (!response?.data?.address) throw Error('No address was generated')
         const script = new P2PKH().lock(response.data.address)
         if (

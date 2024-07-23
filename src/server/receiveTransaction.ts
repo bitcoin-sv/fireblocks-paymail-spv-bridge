@@ -1,5 +1,6 @@
 import { PaymailClient, ReceiveTransactionRoute } from '@bsv/paymail'
-import { SatoshisPerKilobyte, Transaction, WhatsOnChain, ARC, isBroadcastFailure } from '@bsv/sdk'
+import { SatoshisPerKilobyte, Transaction, WhatsOnChain, ARC, isBroadcastFailure, Utils, PublicKey } from '@bsv/sdk'
+import fireblocks from '../fireblocks/client'
 
 const receiveTransactionRoute = new ReceiveTransactionRoute({
   domainLogicHandler: async (params, body) => {
@@ -16,6 +17,61 @@ const receiveTransactionRoute = new ReceiveTransactionRoute({
       if (!valid) throw Error('SPV rejected transaction')
       const arcResponse = await beefTx.broadcast(new ARC('https://arc.taal.com'))
       if (isBroadcastFailure(arcResponse)) throw Error('ARC rejected transaction ' + arcResponse.description + ' ' + arcResponse?.more)
+      const senderInfo = {
+        paymail: body?.metadata?.sender || '',
+        pubkey: body?.metadata?.pubkey || '',
+        signature: body?.metadata?.signature || '',
+        note: body?.metadata?.note || '',
+        reference: body?.reference || ''
+      }
+
+      let createExternalWallet
+      try {
+        createExternalWallet = await fireblocks.externalWallets.createExternalWallet({ 
+          createWalletRequest: {
+            name: senderInfo.paymail,
+            customerRefId: body?.metadata?.pubkey
+          }
+        })
+        console.log({ createExternalWallet })
+      } catch (error) {
+        console.log({ error })
+        const externalWallets = await fireblocks.externalWallets.getExternalWallets()
+        const externalWallet = externalWallets.data.find(wallet => wallet.name === senderInfo.paymail)
+        createExternalWallet = {
+          data: {
+            id: externalWallet.id
+          }
+        }
+      }
+
+      // update the transaction with the reference and associated sender.
+      await Promise.all(tx.inputs.map(async input => {
+        try {
+          const pubkey = Utils.toHex(input.unlockingScript.chunks[1].data)
+          const address = PublicKey.fromString(pubkey).toAddress()
+          const addAddressToWallet = await fireblocks.externalWallets.addAssetToExternalWallet({ 
+            walletId: createExternalWallet?.data?.id || '', 
+            assetId: 'BSV',
+            addAssetToExternalWalletRequest: {
+              address,
+            }
+          })
+          console.log({ addAddressToWallet })
+        } catch (error) {
+          console.log({ error })
+        }
+      }))
+      // wait 10 seconds
+      await new Promise(resolve => setTimeout(resolve, 5000))
+      // update the transaction with the confirmation threshold
+      const setTransactionConfirmationThreshold = await fireblocks.transactions.setTransactionConfirmationThreshold({ 
+        txId: tx.id('hex'), 
+        setConfirmationsThresholdRequest: {
+          numOfConfirmations: 0
+        }
+      })
+      console.log({ setTransactionConfirmationThreshold })
       return {
         txid: tx.id('hex'), note: 'deposit successful'
       }
