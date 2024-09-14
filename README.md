@@ -24,7 +24,7 @@ WEBHOOK_SECRET="<use-some-private-key-in-wif-format>"
 1. Get a Fireblocks account ($500/month).
 2. Set up a Vault and pick BSV as the asset.
 3. Set the "allow one time addresses" policy to true.
-4. Sert up a TAP to allow any sender to your vault, and allow sending to any address from that vault, so long as it's BSV.
+4. Set up a TAP to allow any sender to your vault, and allow sending to any address from that vault, so long as it's BSV.
 5. Set up their mobile app and do the backup key recovery process.
 6. Create an API key and set it to be Editor level priviledges.
 
