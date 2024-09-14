@@ -5,9 +5,10 @@ import 'dotenv/config'
 
 const p2pDestinationsRoute = new P2pPaymentDestinationRoute({
   domainLogicHandler: async (params, body) => {
+    const { name } = P2pPaymentDestinationRoute.getNameAndDomain(params)
     if (typeof body?.satoshis !== 'number') throw new Error('satoshi amount must be a number')
     if (body.satoshis < 1) throw new Error('satoshi amount must be greater than 0')
-    const { script, reference } = await fireblocksPaymailVault.getPaymailDestination()
+    const { script, reference } = await fireblocksPaymailVault.getPaymailDestination(name)
     return {
       outputs: [
         {

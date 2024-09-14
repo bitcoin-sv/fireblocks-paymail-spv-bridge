@@ -5,7 +5,7 @@ const publicProfileRoute = new PublicProfileRoute({
   domainLogicHandler: async (params) => {
     const { name, domain } = PublicProfileRoute.getNameAndDomain(params)
     return {
-      name: 'Vault',
+      name,
       domain,
       avatar: fireblocksPaymailVault.getAvatarUrl()
     }

@@ -38,7 +38,7 @@ class FireblocksVault {
     return this.avatarUrl
   }
 
-  async getPaymailDestination() {
+  async getPaymailDestination(name: string = '') {
     try {
         const reference = this.getReferenceToken(this.counter++)
         const vaults = await fireblocks.vaults.getAssetWallets()
@@ -47,7 +47,7 @@ class FireblocksVault {
           vaultAccountId: vault.vaultId, 
           assetId: 'BSV', 
           createAddressRequest: { 
-            description: reference,
+            description: name + ' ' + reference,
           } 
         })
         if (!response?.data?.address) throw Error('No address was generated')

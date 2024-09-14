@@ -1,7 +1,6 @@
 import { PaymailClient, ReceiveTransactionRoute } from '@bsv/paymail'
 import { SatoshisPerKilobyte, Transaction, WhatsOnChain, ARC, isBroadcastFailure, Utils, PublicKey } from '@bsv/sdk'
 import fireblocks from '../fireblocks/client'
-const client = new PaymailClient()
 
 const receiveTransactionRoute = new ReceiveTransactionRoute({
   domainLogicHandler: async (params, body) => {
@@ -18,54 +17,10 @@ const receiveTransactionRoute = new ReceiveTransactionRoute({
       if (!valid) throw Error('SPV rejected transaction')
       const arcResponse = await beefTx.broadcast(new ARC('https://arc.taal.com'))
       if (isBroadcastFailure(arcResponse)) throw Error('ARC rejected transaction ' + arcResponse.description + ' ' + arcResponse?.more)
-      const sender = {
-        paymail: body?.metadata?.sender || '',
-        pubkey: body?.metadata?.pubkey || '',
-        signature: body?.metadata?.signature || '',
-        note: body?.metadata?.note || '',
-        reference: body?.reference || '',
-        name: '',
-      }
       
-      try {
-        const profile = await client.getPublicProfile(sender.paymail)
-        if (profile.name) sender.name = profile.name
-      } catch (error) {
-        console.log({ error })
-      }
-
-      let senderInfo = ''
-      if (sender.paymail) senderInfo += sender.paymail + '|'
-      if (sender.signature) senderInfo += sender.signature + '|'
-      if (sender.name) senderInfo += sender.name + '|'
-      if (sender.pubkey) senderInfo += PublicKey.fromString(sender.pubkey).toAddress() + '|'
-      if (sender.note) senderInfo += sender.note + '|'
-      if (sender.reference) senderInfo += sender.reference + '|'
-
-      senderInfo = senderInfo.slice(0, 128).split('|').slice(0,-1).join('|')
-      // get the vault account
-      const vaults = await fireblocks.vaults.getAssetWallets()
-      const vault = vaults.data.assetWallets.find(wallet => wallet.assetId === 'BSV')
-      // update the transaction with the reference and associated sender.
-      await Promise.all(tx.outputs.map(async output => {
-        try {
-          const hash = output.lockingScript.chunks[2].data
-          const address = Utils.toBase58Check(hash)
-          const updateVaultAccountAssetAddress = await fireblocks.vaults.updateVaultAccountAssetAddress({ 
-            vaultAccountId: vault.vaultId, 
-            assetId: 'BSV',
-            addressId: address,
-            updateVaultAccountAssetAddressRequest: { 
-              description: senderInfo,
-            },
-          })
-          console.log({ updateVaultAccountAssetAddress })
-        } catch (error) {
-          console.log({ error })
-        }
-      }))
-      // wait 10 seconds
+      // wait 5 seconds
       await new Promise(resolve => setTimeout(resolve, 5000))
+
       // update the transaction with the confirmation threshold
       try {
         const setTransactionConfirmationThreshold = await fireblocks.transactions.setConfirmationThresholdByTransactionHash({ 
