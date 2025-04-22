@@ -69,7 +69,7 @@ npm run server
 ```
 
 ### Deposit into Fireblocks Vault
-To deposit funds from another wallet you just pay using paymail to: `vault@<your-domain>`.
+To deposit funds from another wallet you just pay using paymail to: `<depositor-name>@<your-domain>`.
 
 ### Withdraw from Fireblocks Vault
 To withdraw funds to a paymail wallet you hit the endpoint: `http://localhost:3000/api/pay/<your-paymail>/<amount-in-satoshis>`
